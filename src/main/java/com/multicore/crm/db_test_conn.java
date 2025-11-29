@@ -6,8 +6,8 @@ import java.sql.SQLException;
 
 public class db_test_conn {
     public static void main(String[] args) {
-        String url = "jdbc:postgresql://frrhdeiffkdszxfzmysv.supabase.co:5432/postgres?sslmode=require";
-        String user = "postgres";
+        String url = "jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?user=postgres.frrhdeiffkdszxfzmysv&password=Esd@123...///";
+        String user = "postgres.frrhdeiffkdszxfzmysv";
         String password ="Esd@123...///"; // wrap special chars in quotes
 
         try (Connection conn = DriverManager.getConnection(url, user, password)) {
