@@ -31,3 +31,23 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Spring Boot logs and local configs
+*.log
+logs/
+application-local.properties
+application-dev.properties
+application-secrets.properties
+
+# Environment variables
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Supabase CLI (if present)
+supabase/.temp/
+supabase/.branches/
+supabase/.config
