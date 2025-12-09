@@ -24,4 +24,6 @@ public class CreateStaffDTO {
     private String phone;
 
     private Long businessId;
+
+    private com.multicore.crm.entity.Role.RoleType role;
 }

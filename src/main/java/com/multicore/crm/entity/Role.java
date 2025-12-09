@@ -25,9 +25,14 @@ public class Role {
     private String description;
 
     public enum RoleType {
-        ADMIN,      // System-level, manages all tenants
-        OWNER,      // Owns exactly one business (tenant)
-        STAFF,      // Works in one business
-        CUSTOMER    // Can belong to many businesses via CustomerBusinessMatch
+        SUPER_ADMIN,       // Platform-wide control
+        BUSINESS_ADMIN,    // Business owner / admin
+        SALES_MANAGER,     // Manages sales team and pipeline
+        SALES_AGENT,       // Works assigned leads/tasks
+        SUPPORT_MANAGER,   // Oversees support and SLAs
+        SUPPORT_AGENT,     // Handles support tickets
+        FINANCE,           // Billing and invoices
+        VIEWER,            // Read-only access
+        CUSTOMER           // External customer portal user
     }
 }

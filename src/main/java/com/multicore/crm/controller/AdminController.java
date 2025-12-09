@@ -4,6 +4,7 @@ import com.multicore.crm.dto.LoginResponse;
 import com.multicore.crm.dto.admin.CreateBusinessDTO;
 import com.multicore.crm.dto.admin.CreateOwnerDTO;
 import com.multicore.crm.dto.admin.OwnerResponseDTO;
+import com.multicore.crm.dto.admin.PlatformStatsDTO;
 import com.multicore.crm.entity.Business;
 import com.multicore.crm.service.AdminService;
 import com.multicore.crm.service.AuthService;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/admin")
 @CrossOrigin(origins = "*", maxAge = 3600)
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 public class AdminController {
 
     private final AuthService authService;
@@ -109,5 +110,42 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Business not found: " + e.getMessage());
         }
+    }
+
+    // ==================== ACTIVATE / DEACTIVATE BUSINESS ====================
+    /**
+     * PATCH /api/admin/businesses/{businessId}/status?active=true|false
+     * Super Admin toggles business activation
+     */
+    @PatchMapping("/businesses/{businessId}/status")
+    public ResponseEntity<?> toggleBusiness(@PathVariable Long businessId,
+                                            @RequestParam boolean active) {
+        try {
+            Business business = adminService.setBusinessActive(businessId, active);
+            return ResponseEntity.ok(OwnerResponseDTO.builder()
+                    .message("Business status updated")
+                    .businessId(business.getId())
+                    .businessName(business.getName())
+                    .success(true)
+                    .build());
+        } catch (Exception e) {
+            log.error("Failed to update business status: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(OwnerResponseDTO.builder()
+                            .message("Failed to update business status: " + e.getMessage())
+                            .success(false)
+                            .build());
+        }
+    }
+
+    // ==================== PLATFORM STATS ====================
+    /**
+     * GET /api/admin/stats
+     * Super Admin overview counts
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<PlatformStatsDTO> getStats() {
+        PlatformStatsDTO stats = adminService.getPlatformStats();
+        return ResponseEntity.ok(stats);
     }
 }

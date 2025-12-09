@@ -38,7 +38,12 @@ public class LeadActivity {
     private User createdBy;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 
     public enum ActivityType {
         CALL, EMAIL, MEETING, NOTE, TASK_COMPLETED, ENGAGEMENT, OTHER

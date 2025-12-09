@@ -42,6 +42,10 @@ public class Business {
     @OneToMany(mappedBy = "business", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CustomerBusinessMatch> customerMatches;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -2,7 +2,6 @@ package com.multicore.crm.controller;
 
 import com.multicore.crm.dto.LoginResponse;
 import com.multicore.crm.service.AuthService;
-import com.multicore.crm.service.OwnerService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,15 +13,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/owner")
 @CrossOrigin(origins = "*", maxAge = 3600)
-@PreAuthorize("hasRole('OWNER')")
+@PreAuthorize("hasRole('BUSINESS_ADMIN')")
 public class OwnerController {
 
     private final AuthService authService;
-    private final OwnerService ownerService;
 
-    public OwnerController(AuthService authService, OwnerService ownerService) {
+    public OwnerController(AuthService authService) {
         this.authService = authService;
-        this.ownerService = ownerService;
     }
 
     // ==================== CREATE STAFF ====================
@@ -36,6 +33,7 @@ public class OwnerController {
             @RequestParam String email,
             @RequestParam String password,
             @RequestParam String phone,
+            @RequestParam(name = "role") com.multicore.crm.entity.Role.RoleType roleType,
             HttpServletRequest request) {
         try {
             Long businessId = (Long) request.getAttribute("businessId");
@@ -47,7 +45,7 @@ public class OwnerController {
                                 .build());
             }
 
-            LoginResponse response = authService.createStaff(businessId, fullName, email, password, phone);
+            LoginResponse response = authService.createStaff(businessId, fullName, email, password, phone, roleType);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             log.error("Staff creation failed: {}", e.getMessage());

@@ -45,7 +45,7 @@ public class AuthService {
         // Check if any admin already exists
         boolean adminExists = userRepository.findAll().stream()
                 .anyMatch(u -> u.getRoles().stream()
-                        .anyMatch(r -> r.getRoleName() == Role.RoleType.ADMIN));
+                        .anyMatch(r -> r.getRoleName() == Role.RoleType.SUPER_ADMIN));
         
         if (adminExists) {
             throw new RuntimeException("System admin already exists. Cannot register multiple admins.");
@@ -55,10 +55,10 @@ public class AuthService {
             throw new RuntimeException("Email already registered");
         }
 
-        Role adminRole = roleRepository.findByRoleName(Role.RoleType.ADMIN)
+        Role adminRole = roleRepository.findByRoleName(Role.RoleType.SUPER_ADMIN)
                 .orElseGet(() -> {
                     Role newRole = Role.builder()
-                            .roleName(Role.RoleType.ADMIN)
+                            .roleName(Role.RoleType.SUPER_ADMIN)
                             .description("System Administrator")
                             .build();
                     return roleRepository.save(newRole);
@@ -84,7 +84,7 @@ public class AuthService {
                 .email(savedAdmin.getEmail())
                 .fullName(savedAdmin.getFullName())
                 .businessId(null)
-                .role("ADMIN")
+                .role("SUPER_ADMIN")
                 .message("Admin registered successfully")
                 .success(true)
                 .build();
@@ -188,10 +188,10 @@ public class AuthService {
         Business business = businessRepository.findById(request.getBusinessId())
                 .orElseThrow(() -> new RuntimeException("Business not found"));
 
-        Role ownerRole = roleRepository.findByRoleName(Role.RoleType.OWNER)
+        Role ownerRole = roleRepository.findByRoleName(Role.RoleType.BUSINESS_ADMIN)
                 .orElseGet(() -> {
                     Role newRole = Role.builder()
-                            .roleName(Role.RoleType.OWNER)
+                            .roleName(Role.RoleType.BUSINESS_ADMIN)
                             .description("Business Owner")
                             .build();
                     return roleRepository.save(newRole);
@@ -219,14 +219,14 @@ public class AuthService {
                 .email(savedOwner.getEmail())
                 .fullName(savedOwner.getFullName())
                 .businessId(savedOwner.getBusiness().getId())
-                .role("OWNER")
+                .role("BUSINESS_ADMIN")
                 .message("Owner created successfully")
                 .success(true)
                 .build();
     }
 
     // ==================== CREATE STAFF ====================
-    public LoginResponse createStaff(Long businessId, String fullName, String email, String password, String phone) {
+    public LoginResponse createStaff(Long businessId, String fullName, String email, String password, String phone, Role.RoleType roleType) {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("Email already registered");
         }
@@ -234,10 +234,15 @@ public class AuthService {
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
 
-        Role staffRole = roleRepository.findByRoleName(Role.RoleType.STAFF)
+        // Only allow non-admin/internal staff roles
+        if (roleType == null || roleType == Role.RoleType.SUPER_ADMIN || roleType == Role.RoleType.BUSINESS_ADMIN) {
+            throw new RuntimeException("Invalid staff role");
+        }
+
+        Role staffRole = roleRepository.findByRoleName(roleType)
                 .orElseGet(() -> {
                     Role newRole = Role.builder()
-                            .roleName(Role.RoleType.STAFF)
+                            .roleName(roleType)
                             .description("Staff Member")
                             .build();
                     return roleRepository.save(newRole);
@@ -263,7 +268,7 @@ public class AuthService {
                 .email(savedStaff.getEmail())
                 .fullName(savedStaff.getFullName())
                 .businessId(savedStaff.getBusiness().getId())
-                .role("STAFF")
+                .role(roleType.name())
                 .message("Staff created successfully")
                 .success(true)
                 .build();

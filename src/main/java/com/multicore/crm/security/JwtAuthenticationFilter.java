@@ -33,12 +33,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (StringUtils.hasText(jwt) && jwtUtil.validateToken(jwt)) {
                 String email = jwtUtil.extractEmail(jwt);
                 Long businessId = jwtUtil.extractBusinessId(jwt);
+                Long userId = jwtUtil.extractUserId(jwt);
 
                 var userDetails = customUserDetailsService.loadUserByUsername(email);
+
+                // Verify authorities are loaded (for debugging)
+                if (userDetails.getAuthorities().isEmpty()) {
+                    log.warn("User {} has no authorities assigned", email);
+                } else {
+                    log.debug("User {} authenticated with authorities: {}", email, userDetails.getAuthorities());
+                }
 
                 // Add businessId and tenantId to request attributes for tenant enforcement
                 request.setAttribute("businessId", businessId);
                 request.setAttribute("tenantId", businessId);
+                request.setAttribute("userId", userId);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

@@ -22,26 +22,6 @@ public class AuthController {
         this.authService = authService;
     }
 
-    // ==================== ADMIN REGISTRATION ====================
-    /**
-     * POST /api/auth/register/admin
-     * Register the first system admin (should be called ONCE)
-     */
-    @PostMapping("/register/admin")
-    public ResponseEntity<LoginResponse> registerAdmin(@Valid @RequestBody RegisterRequest request) {
-        try {
-            LoginResponse response = authService.registerAdmin(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (Exception e) {
-            log.error("Admin registration failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(LoginResponse.builder()
-                            .message("Registration failed: " + e.getMessage())
-                            .success(false)
-                            .build());
-        }
-    }
-
     // ==================== CUSTOMER REGISTRATION ====================
     /**
      * POST /api/auth/register/customer

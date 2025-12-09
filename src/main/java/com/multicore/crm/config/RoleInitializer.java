@@ -20,6 +20,7 @@ public class RoleInitializer implements CommandLineRunner {
             roleRepository.findByRoleName(roleType).orElseGet(() -> {
                 Role role = new Role();
                 role.setRoleName(roleType);
+                role.setDescription(roleType.name().replace("_", " ").toLowerCase());
                 return roleRepository.save(role);
             });
         }

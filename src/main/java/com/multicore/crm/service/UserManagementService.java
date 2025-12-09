@@ -46,11 +46,17 @@ public class UserManagementService {
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
 
-        // Get or create STAFF role
-        Role staffRole = roleRepository.findByRoleName(Role.RoleType.STAFF)
+        // Validate role
+        Role.RoleType roleType = request.getRole();
+        if (roleType == null || roleType == Role.RoleType.SUPER_ADMIN || roleType == Role.RoleType.BUSINESS_ADMIN) {
+            throw new RuntimeException("Invalid staff role");
+        }
+
+        // Get or create role
+        Role staffRole = roleRepository.findByRoleName(roleType)
                 .orElseGet(() -> {
                     Role newRole = Role.builder()
-                            .roleName(Role.RoleType.STAFF)
+                            .roleName(roleType)
                             .description("Staff Member")
                             .build();
                     return roleRepository.save(newRole);
