@@ -37,6 +37,10 @@ public class Customer {
     private String address;
     private String source;
 
+    private String companyName;
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

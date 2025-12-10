@@ -2,7 +2,11 @@ package com.multicore.crm.controller;
 
 import com.multicore.crm.dto.LoginRequest;
 import com.multicore.crm.dto.LoginResponse;
+import com.multicore.crm.dto.MeResponse;
 import com.multicore.crm.dto.RegisterRequest;
+import com.multicore.crm.entity.Role;
+import com.multicore.crm.entity.User;
+import com.multicore.crm.repository.UserRepository;
 import com.multicore.crm.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +21,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserRepository userRepository;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserRepository userRepository) {
         this.authService = authService;
+        this.userRepository = userRepository;
     }
 
     // ==================== CUSTOMER REGISTRATION ====================
@@ -60,5 +66,33 @@ public class AuthController {
                             .success(false)
                             .build());
         }
+    }
+
+    // ==================== ME ====================
+    /**
+     * GET /api/auth/me
+     * Returns the current authenticated user's profile derived from JWT
+     */
+    @GetMapping("/me")
+    public ResponseEntity<MeResponse> me(@org.springframework.security.core.annotation.AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        return userRepository.findByEmail(principal.getUsername())
+                .map(this::toMeResponse)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+
+    private MeResponse toMeResponse(User u) {
+        String roleName = u.getRoles().stream().findFirst().map(Role::getRoleName).map(Enum::name).orElse("VIEWER");
+        Long bizId = u.getBusiness() != null ? u.getBusiness().getId() : null;
+        return MeResponse.builder()
+                .id(u.getId())
+                .email(u.getEmail())
+                .fullName(u.getFullName())
+                .role(roleName)
+                .businessId(bizId)
+                .build();
     }
 }

@@ -1,4 +1,4 @@
-package com.multicore.crm.service.impl;
+package com.multicore.crm.service;
 
 import com.multicore.crm.dto.*;
 import com.multicore.crm.entity.Appointment;

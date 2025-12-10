@@ -51,3 +51,4 @@ Thumbs.db
 supabase/.temp/
 supabase/.branches/
 supabase/.config
+node_modules
