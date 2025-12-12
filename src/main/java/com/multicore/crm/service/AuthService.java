@@ -5,9 +5,11 @@ import com.multicore.crm.dto.LoginResponse;
 import com.multicore.crm.dto.RegisterRequest;
 import com.multicore.crm.dto.admin.CreateOwnerDTO;
 import com.multicore.crm.entity.Business;
+import com.multicore.crm.entity.Lead;
 import com.multicore.crm.entity.Role;
 import com.multicore.crm.entity.User;
 import com.multicore.crm.repository.BusinessRepository;
+import com.multicore.crm.repository.LeadRepository;
 import com.multicore.crm.repository.RoleRepository;
 import com.multicore.crm.repository.UserRepository;
 import com.multicore.crm.security.JwtUtil;
@@ -15,27 +17,32 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
 @Service
-@Transactional
 public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final BusinessRepository businessRepository;
+    private final LeadRepository leadRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
-                       BusinessRepository businessRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+                       BusinessRepository businessRepository, LeadRepository leadRepository,
+                       PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.businessRepository = businessRepository;
+        this.leadRepository = leadRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
     }
@@ -91,6 +98,9 @@ public class AuthService {
     }
 
     // ==================== CUSTOMER REGISTRATION ====================
+    // New flow: Registration creates User + Lead (NOT Customer)
+    // Customer is created only when Lead is qualified
+    @Transactional
     public LoginResponse registerCustomer(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already registered");
@@ -118,8 +128,11 @@ public class AuthService {
         User savedCustomer = userRepository.save(customer);
         log.info("Customer registered successfully: {}", savedCustomer.getEmail());
 
+        // Generate token - registration is successful at this point
         String token = jwtUtil.generateToken(savedCustomer);
-        return LoginResponse.builder()
+        
+        // Build response
+        LoginResponse response = LoginResponse.builder()
                 .token(token)
                 .userId(savedCustomer.getId())
                 .email(savedCustomer.getEmail())
@@ -129,41 +142,89 @@ public class AuthService {
                 .message("Customer registered successfully")
                 .success(true)
                 .build();
+        
+        // Create Lead AFTER transaction commits (NEW FLOW: Lead only, NO Customer)
+        // Customer is created when Lead status changes to QUALIFIED
+        final User finalUser = savedCustomer;
+        final RegisterRequest finalRequest = request;
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        createLeadForRegisteredUser(finalUser, finalRequest);
+                    } catch (Exception e) {
+                        log.warn("Failed to create lead for registered user {}: {}. Registration was successful.", 
+                                finalUser.getEmail(), e.getMessage());
+                    }
+                }
+            });
+        } else {
+            // If no transaction, create lead directly
+            try {
+                createLeadForRegisteredUser(savedCustomer, request);
+            } catch (Exception e) {
+                log.warn("Failed to create lead for registered user {}: {}. Registration was successful.", 
+                        savedCustomer.getEmail(), e.getMessage());
+            }
+        }
+        
+        return response;
     }
 
     // ==================== LOGIN ====================
+    @Transactional(readOnly = true, timeout = 10)
     public LoginResponse login(LoginRequest request) {
-        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
-        if (userOpt.isEmpty()) {
-            throw new RuntimeException("Invalid email or password");
+        try {
+            // Use query that eagerly loads relationships to avoid lazy loading issues
+            Optional<User> userOpt = userRepository.findByEmailWithRelations(request.getEmail());
+            if (userOpt.isEmpty()) {
+                throw new RuntimeException("Invalid email or password");
+            }
+
+            User user = userOpt.get();
+
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                throw new RuntimeException("Invalid email or password");
+            }
+
+            if (user.getStatus() != User.UserStatus.ACTIVE) {
+                throw new RuntimeException("User account is inactive or suspended");
+            }
+
+            // Access roles safely (EAGER loaded, so no lazy loading issue)
+            String primaryRole = "CUSTOMER";
+            if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+                primaryRole = user.getRoles().iterator().next().getRoleName().toString();
+            }
+
+            // Access business (eagerly loaded via query, so no lazy loading issue)
+            Long businessId = null;
+            Business business = user.getBusiness();
+            if (business != null) {
+                businessId = business.getId();
+            }
+
+            String token = jwtUtil.generateToken(user);
+            log.info("User logged in successfully: {} with role: {}", user.getEmail(), primaryRole);
+
+            return LoginResponse.builder()
+                    .token(token)
+                    .userId(user.getId())
+                    .email(user.getEmail())
+                    .fullName(user.getFullName())
+                    .businessId(businessId)
+                    .role(primaryRole)
+                    .message("Login successful")
+                    .success(true)
+                    .build();
+        } catch (RuntimeException e) {
+            // Re-throw business exceptions
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during login: {}", e.getMessage(), e);
+            throw new RuntimeException("Login failed: " + e.getMessage());
         }
-
-        User user = userOpt.get();
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
-        }
-
-        if (user.getStatus() != User.UserStatus.ACTIVE) {
-            throw new RuntimeException("User account is inactive or suspended");
-        }
-
-        String primaryRole = user.getRoles().isEmpty() ? "CUSTOMER" : 
-                user.getRoles().iterator().next().getRoleName().toString();
-
-        String token = jwtUtil.generateToken(user);
-        log.info("User logged in successfully: {} with role: {}", user.getEmail(), primaryRole);
-
-        return LoginResponse.builder()
-                .token(token)
-                .userId(user.getId())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .businessId(user.getBusiness() != null ? user.getBusiness().getId() : null)
-                .role(primaryRole)
-                .message("Login successful")
-                .success(true)
-                .build();
     }
 
     // ==================== CREATE BUSINESS ====================
@@ -273,4 +334,39 @@ public class AuthService {
                 .success(true)
                 .build();
     }
+
+    // NEW FLOW: Create Lead only (NO Customer) when user registers
+    // Customer is created later when Lead status changes to QUALIFIED via convertToCustomer
+    // This method runs AFTER transaction commits, so it won't cause rollback
+    private void createLeadForRegisteredUser(User savedUser, RegisterRequest request) {
+        try {
+            List<Business> activeBusinesses = businessRepository.findByActiveTrue();
+            if (activeBusinesses.isEmpty()) {
+                log.info("No active businesses found. User registered but no lead created.");
+                return;
+            }
+
+            String phoneValue = (request.getPhone() != null && !request.getPhone().isEmpty()) 
+                ? request.getPhone() : "N/A";
+            
+            // Create Lead for first active business (NEW FLOW: Lead only, NO Customer)
+            Business firstBusiness = activeBusinesses.get(0);
+            Lead lead = Lead.builder()
+                    .name(request.getFullName())
+                    .email(request.getEmail())
+                    .phone(phoneValue)
+                    .business(firstBusiness)
+                    .customer(null) // NO Customer - Customer created when Lead is qualified
+                    .status(Lead.LeadStatus.NEW)
+                    .score(0)
+                    .notes("Auto-created lead from customer registration")
+                    .build();
+            leadRepository.save(lead);
+            log.info("Created lead for registered user {} in business {}", savedUser.getEmail(), firstBusiness.getName());
+        } catch (Exception e) {
+            log.warn("Error creating lead for registered user: {}. Registration was successful.", e.getMessage());
+            // Don't throw - registration is already complete
+        }
+    }
+
 }

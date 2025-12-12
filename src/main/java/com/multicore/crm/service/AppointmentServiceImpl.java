@@ -3,7 +3,6 @@ package com.multicore.crm.service;
 import com.multicore.crm.dto.*;
 import com.multicore.crm.entity.Appointment;
 import com.multicore.crm.repository.AppointmentRepository;
-import com.multicore.crm.service.AppointmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

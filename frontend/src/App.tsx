@@ -21,6 +21,7 @@ import { AuditLogView } from './components/AuditLogView';
 import { CustomerPortal } from './components/CustomerPortal';
 import { BusinessSettings } from './components/BusinessSettings';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { OwnerDashboard } from './components/OwnerDashboard';
 
 function AppContent() {
   const { currentUser, currentView, logout } = useCRM();
@@ -39,6 +40,8 @@ function AppContent() {
     switch (currentView) {
       case 'super-admin-dashboard':
         return <SuperAdminDashboard />;
+      case 'owner-dashboard':
+        return <OwnerDashboard />;
       case 'company-dashboard':
         return <CompanyDashboard />;
       case 'customers':
@@ -74,7 +77,12 @@ function AppContent() {
       case 'analytics':
         return <AnalyticsDashboard />;
       default:
-        return currentUser.role === 'super_admin' ? <SuperAdminDashboard /> : <CompanyDashboard />;
+        if (currentUser.role === 'super_admin') {
+          return <SuperAdminDashboard />;
+        } else if (currentUser.role === 'owner') {
+          return <OwnerDashboard />;
+        }
+        return <CompanyDashboard />;
     }
   };
 

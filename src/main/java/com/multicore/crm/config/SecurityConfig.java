@@ -147,7 +147,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/register/customer").permitAll()
                         // Admin/Owner creation flows
                         .requestMatchers(HttpMethod.POST, "/api/auth/register/admin").permitAll()
-                        .requestMatchers("/error", "/actuator/**").permitAll()
+                        .requestMatchers("/error", "/actuator/**", "/api/health").permitAll()
                         // Role-based guards
                         .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/owner/**").hasRole("BUSINESS_ADMIN")
@@ -172,10 +172,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        // Explicit origins required when allowCredentials is true
+        config.setAllowedOrigins(List.of(
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

@@ -1,8 +1,12 @@
 package com.multicore.crm.controller;
 
 import com.multicore.crm.dto.LoginResponse;
+import com.multicore.crm.dto.admin.CreateBusinessDTO;
+import com.multicore.crm.dto.admin.OwnerResponseDTO;
+import com.multicore.crm.entity.Business;
 import com.multicore.crm.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/api/owner")
-@CrossOrigin(origins = "*", maxAge = 3600)
 @PreAuthorize("hasRole('BUSINESS_ADMIN')")
 public class OwnerController {
 
@@ -20,6 +23,36 @@ public class OwnerController {
 
     public OwnerController(AuthService authService) {
         this.authService = authService;
+    }
+
+    // ==================== CREATE BUSINESS ====================
+    /**
+     * POST /api/owner/create-business
+     * Business Owner creates a new business
+     */
+    @PostMapping("/create-business")
+    public ResponseEntity<?> createBusiness(@Valid @RequestBody CreateBusinessDTO request) {
+        try {
+            Business business = authService.createBusiness(
+                    request.getName(),
+                    request.getDescription(),
+                    request.getIndustry()
+            );
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(OwnerResponseDTO.builder()
+                            .message("Business created successfully")
+                            .businessId(business.getId())
+                            .businessName(business.getName())
+                            .success(true)
+                            .build());
+        } catch (Exception e) {
+            log.error("Business creation failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(OwnerResponseDTO.builder()
+                            .message("Business creation failed: " + e.getMessage())
+                            .success(false)
+                            .build());
+        }
     }
 
     // ==================== CREATE STAFF ====================

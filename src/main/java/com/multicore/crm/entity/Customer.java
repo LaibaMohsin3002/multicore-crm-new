@@ -46,6 +46,7 @@ public class Customer {
 
     private LocalDateTime updatedAt;
     
+    @Builder.Default
     private Boolean deleted = false;
 
     @PrePersist

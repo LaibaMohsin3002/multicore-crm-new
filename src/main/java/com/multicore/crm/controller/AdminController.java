@@ -1,7 +1,6 @@
 package com.multicore.crm.controller;
 
 import com.multicore.crm.dto.LoginResponse;
-import com.multicore.crm.dto.admin.CreateBusinessDTO;
 import com.multicore.crm.dto.admin.CreateOwnerDTO;
 import com.multicore.crm.dto.admin.OwnerResponseDTO;
 import com.multicore.crm.dto.admin.PlatformStatsDTO;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*", maxAge = 3600)
 @PreAuthorize("hasRole('SUPER_ADMIN')")
 public class AdminController {
 
@@ -30,37 +28,9 @@ public class AdminController {
         this.adminService = adminService;
     }
 
-    // ==================== CREATE BUSINESS ====================
-    /**
-     * POST /api/admin/create-business
-     * Admin creates a new business (tenant)
-     */
-    @PostMapping("/create-business")
-    public ResponseEntity<?> createBusiness(@Valid @RequestBody CreateBusinessDTO request) {
-        try {
-            Business business = authService.createBusiness(
-                    request.getName(),
-                    request.getDescription(),
-                    request.getIndustry()
-            );
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(OwnerResponseDTO.builder()
-                            .message("Business created successfully")
-                            .businessId(business.getId())
-                            .businessName(business.getName())
-                            .success(true)
-                            .build());
-        } catch (Exception e) {
-            log.error("Business creation failed: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(OwnerResponseDTO.builder()
-                            .message("Business creation failed: " + e.getMessage())
-                            .success(false)
-                            .build());
-        }
-    }
-
     // ==================== CREATE OWNER ====================
+    // Note: Business creation is now done by Business Owners via /api/owner/create-business
+    // Super Admin can only create owners for existing businesses
     /**
      * POST /api/admin/create-owner
      * Admin creates an owner for a business

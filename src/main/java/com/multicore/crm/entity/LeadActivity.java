@@ -31,6 +31,7 @@ public class LeadActivity {
 
     // Score increment for this activity (increases lead score)
     @Column(nullable = false)
+    @Builder.Default
     private Integer scorePoints = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)

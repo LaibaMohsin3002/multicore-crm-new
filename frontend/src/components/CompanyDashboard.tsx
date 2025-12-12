@@ -3,25 +3,26 @@ import { Users, Target, Calendar, TrendingUp, CheckCircle, Clock, Ticket as Tick
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 export function CompanyDashboard() {
-  const { currentUser, customers, leads, tasks, appointments, tickets } = useCRM();
+  const { currentUser, customers, leads, tasks = [], appointments = [], tickets = [] } = useCRM();
 
-  const tenantCustomers = customers.filter(c => c.tenantId === currentUser?.tenantId);
-  const tenantLeads = leads.filter(l => l.tenantId === currentUser?.tenantId);
-  const tenantTasks = tasks.filter(t => t.tenantId === currentUser?.tenantId);
-  const tenantAppointments = appointments.filter(a => a.tenantId === currentUser?.tenantId);
-  const tenantTickets = tickets.filter(t => t.tenantId === currentUser?.tenantId);
+  // Handle cases where tenantId might not exist - use all data for now
+  const tenantCustomers = customers || [];
+  const tenantLeads = leads || [];
+  const tenantTasks = tasks || [];
+  const tenantAppointments = appointments || [];
+  const tenantTickets = tickets || [];
 
-  const pendingTasks = tenantTasks.filter(t => t.status === 'pending').length;
-  const upcomingAppointments = tenantAppointments.filter(a => a.status === 'scheduled').length;
-  const openTickets = tenantTickets.filter(t => t.status === 'open' || t.status === 'in_progress').length;
+  const pendingTasks = tenantTasks.filter(t => t?.status === 'pending').length;
+  const upcomingAppointments = tenantAppointments.filter(a => a?.status === 'scheduled').length;
+  const openTickets = tenantTickets.filter(t => t?.status === 'open' || t?.status === 'in_progress').length;
 
   const leadsByStatus = {
-    new: tenantLeads.filter(l => l.status === 'new').length,
-    contacted: tenantLeads.filter(l => l.status === 'contacted').length,
-    qualified: tenantLeads.filter(l => l.status === 'qualified').length,
-    proposal: tenantLeads.filter(l => l.status === 'proposal').length,
-    won: tenantLeads.filter(l => l.status === 'won').length,
-    lost: tenantLeads.filter(l => l.status === 'lost').length
+    new: tenantLeads.filter(l => l?.status === 'new').length,
+    contacted: tenantLeads.filter(l => l?.status === 'contacted').length,
+    qualified: tenantLeads.filter(l => l?.status === 'qualified').length,
+    proposal: tenantLeads.filter(l => l?.status === 'proposal').length,
+    won: tenantLeads.filter(l => l?.status === 'won').length,
+    lost: tenantLeads.filter(l => l?.status === 'lost').length
   };
 
   const leadPipelineData = [
@@ -159,27 +160,31 @@ export function CompanyDashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="mb-4">Recent Tasks</h3>
           <div className="space-y-3">
-            {tenantTasks.slice(0, 5).map(task => (
-              <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    task.status === 'completed' ? 'bg-green-500' :
-                    task.status === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
-                  }`} />
-                  <div>
-                    <div className="text-gray-900">{task.title}</div>
-                    <div className="text-gray-500">Due: {new Date(task.dueDate).toLocaleDateString()}</div>
+            {tenantTasks.length > 0 ? (
+              tenantTasks.slice(0, 5).map(task => (
+                <div key={task?.id || Math.random()} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      task?.status === 'completed' ? 'bg-green-500' :
+                      task?.status === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'
+                    }`} />
+                    <div>
+                      <div className="text-gray-900">{task?.title || 'Untitled Task'}</div>
+                      <div className="text-gray-500">Due: {task?.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</div>
+                    </div>
                   </div>
+                  <span className={`px-2 py-1 rounded text-white ${
+                    task?.type === 'call' ? 'bg-blue-500' :
+                    task?.type === 'meeting' ? 'bg-purple-500' :
+                    task?.type === 'email' ? 'bg-green-500' : 'bg-orange-500'
+                  }`}>
+                    {task?.type || 'task'}
+                  </span>
                 </div>
-                <span className={`px-2 py-1 rounded text-white ${
-                  task.type === 'call' ? 'bg-blue-500' :
-                  task.type === 'meeting' ? 'bg-purple-500' :
-                  task.type === 'email' ? 'bg-green-500' : 'bg-orange-500'
-                }`}>
-                  {task.type}
-                </span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="text-gray-500 text-center py-4">No tasks available</div>
+            )}
           </div>
         </div>
 
