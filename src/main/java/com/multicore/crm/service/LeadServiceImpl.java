@@ -122,6 +122,19 @@ public class LeadServiceImpl implements LeadService {
     @Override
     public LeadDTO convertToCustomer(Long id) {
         Lead lead = leadRepository.findById(id).orElseThrow(() -> new RuntimeException("Lead not found"));
+        
+        // NEW FLOW: Only convert to Customer when Lead is QUALIFIED
+        if (lead.getStatus() != Lead.LeadStatus.QUALIFIED) {
+            throw new RuntimeException("Lead must be QUALIFIED before converting to Customer. Current status: " + lead.getStatus());
+        }
+        
+        // Check if customer already exists for this lead
+        if (lead.getCustomer() != null) {
+            log.info("Lead {} already has a customer associated. Customer ID: {}", id, lead.getCustomer().getId());
+            return convertToDTO(lead);
+        }
+        
+        // Create Customer from qualified Lead
         Customer customer = Customer.builder()
                 .name(lead.getName())
                 .email(lead.getEmail())
@@ -130,6 +143,11 @@ public class LeadServiceImpl implements LeadService {
                 .source("converted_from_lead")
                 .build();
         Customer saved = customerRepository.save(customer);
+        
+        // Link the customer to the lead
+        lead.setCustomer(saved);
+        leadRepository.save(lead);
+        
         log.info("Lead {} converted to Customer {}", id, saved.getId());
         return convertToDTO(lead);
     }

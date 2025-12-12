@@ -8,32 +8,45 @@ export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(email, password);
-    if (!success) {
-      setError("Invalid credentials");
-    } else {
-      setError("");
+    setError("");
+    try {
+      const success = await login(email, password);
+      if (!success) {
+        setError("Invalid credentials. Please check your email and password.");
+      } else {
+        setError("");
+      }
+    } catch (err: any) {
+      const errorMsg = err?.message || "Login failed. Please try again.";
+      setError(errorMsg.includes("Login failed:") ? errorMsg.replace("Login failed: ", "") : errorMsg);
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await register({
-      fullName: name,
-      email,
-      password,
-      phone: "",
-    });
-    if (success) {
-      // Auto-login after registration
-      await login(email, password);
-      setError("");
-    } else {
-      setError("Registration failed");
+    setError("");
+    try {
+      const success = await register({
+        fullName: name,
+        email,
+        password,
+        phone: phone || "N/A",
+      });
+      if (success) {
+        // Auto-login after registration
+        await login(email, password);
+        setError("");
+      } else {
+        setError("Registration failed. Please try again.");
+      }
+    } catch (err: any) {
+      const errorMsg = err?.message || "Registration failed. Please try again.";
+      setError(errorMsg.includes("Registration failed:") ? errorMsg.replace("Registration failed: ", "") : errorMsg);
     }
   };
 
@@ -77,6 +90,7 @@ export function LoginScreen() {
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       placeholder="you@company.com"
+                      autoComplete="email"
                       required
                     />
                   </div>
@@ -92,6 +106,7 @@ export function LoginScreen() {
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       placeholder="••••••••"
+                      autoComplete="current-password"
                       required
                     />
                   </div>
@@ -217,6 +232,7 @@ export function LoginScreen() {
                       onChange={(e) => setName(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       placeholder="John Doe"
+                      autoComplete="name"
                       required
                     />
                   </div>
@@ -232,6 +248,7 @@ export function LoginScreen() {
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       placeholder="you@example.com"
+                      autoComplete="email"
                       required
                     />
                   </div>
@@ -247,11 +264,26 @@ export function LoginScreen() {
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       placeholder="••••••••"
+                      autoComplete="new-password"
                       required
-                      minLength={8}
+                      minLength={6}
                     />
                   </div>
-                  <p className="text-gray-500 mt-1">Minimum 8 characters</p>
+                  <p className="text-gray-500 mt-1">Minimum 6 characters</p>
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 mb-2">Phone (Optional)</label>
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full pl-4 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder="+1234567890"
+                      autoComplete="tel"
+                    />
+                  </div>
                 </div>
 
                 {error && (

@@ -145,9 +145,10 @@ public class SecurityConfig {
                         // Public endpoints - NO JWT REQUIRED
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register/customer").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/portal/register").permitAll()
                         // Admin/Owner creation flows
                         .requestMatchers(HttpMethod.POST, "/api/auth/register/admin").permitAll()
-                        .requestMatchers("/error", "/actuator/**").permitAll()
+                        .requestMatchers("/error", "/actuator/**", "/api/health").permitAll()
                         // Role-based guards
                         .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/owner/**").hasRole("BUSINESS_ADMIN")
@@ -155,7 +156,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/leads/**").hasAnyRole("BUSINESS_ADMIN","SALES_MANAGER","SALES_AGENT","VIEWER")
                         .requestMatchers("/api/tickets/**").hasAnyRole("BUSINESS_ADMIN","SUPPORT_MANAGER","SUPPORT_AGENT","VIEWER","CUSTOMER")
                         .requestMatchers("/api/business/*/sales/**").hasAnyRole("BUSINESS_ADMIN","SALES_AGENT","SUPPORT_MANAGER","SUPPORT_AGENT")
-                            .requestMatchers("/api/business/**").hasRole("BUSINESS_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/business").hasRole("BUSINESS_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/business/*/staff").hasRole("BUSINESS_ADMIN")
+                        .requestMatchers("/api/business/**").hasRole("BUSINESS_ADMIN")
                         .requestMatchers("/api/business/*/tasks/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/leads/activities").permitAll()
                         .requestMatchers("/api/deals/products/**").authenticated()
@@ -172,10 +175,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        // Explicit origins required when allowCredentials is true
+        config.setAllowedOrigins(List.of(
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

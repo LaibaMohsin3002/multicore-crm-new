@@ -39,6 +39,7 @@ public class User {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
@@ -47,6 +48,7 @@ public class User {
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+    @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
     @Column(nullable = false, updatable = false)
@@ -54,6 +56,16 @@ public class User {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    // Track who created this user (for audit logs)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
+
+    // Flag to require password reset on first login (for auto-generated passwords)
+    @Column(nullable = true)
+    @Builder.Default
+    private Boolean requirePasswordReset = false;
 
     @PrePersist
     protected void onCreate() {

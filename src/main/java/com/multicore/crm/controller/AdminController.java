@@ -1,13 +1,14 @@
 package com.multicore.crm.controller;
 
 import com.multicore.crm.dto.LoginResponse;
-import com.multicore.crm.dto.admin.CreateBusinessDTO;
 import com.multicore.crm.dto.admin.CreateOwnerDTO;
+import com.multicore.crm.dto.admin.CreateOwnerRequest;
 import com.multicore.crm.dto.admin.OwnerResponseDTO;
 import com.multicore.crm.dto.admin.PlatformStatsDTO;
 import com.multicore.crm.entity.Business;
 import com.multicore.crm.service.AdminService;
 import com.multicore.crm.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*", maxAge = 3600)
 @PreAuthorize("hasRole('SUPER_ADMIN')")
 public class AdminController {
 
@@ -30,41 +30,36 @@ public class AdminController {
         this.adminService = adminService;
     }
 
-    // ==================== CREATE BUSINESS ====================
+    // ==================== CREATE OWNER (NEW: Direct creation) ====================
     /**
-     * POST /api/admin/create-business
-     * Admin creates a new business (tenant)
+     * POST /api/admin/owners
+     * Super Admin creates a Business Owner directly (with optional business creation)
      */
-    @PostMapping("/create-business")
-    public ResponseEntity<?> createBusiness(@Valid @RequestBody CreateBusinessDTO request) {
+    @PostMapping("/owners")
+    public ResponseEntity<LoginResponse> createOwnerDirect(
+            @Valid @RequestBody CreateOwnerRequest request,
+            HttpServletRequest httpRequest) {
         try {
-            Business business = authService.createBusiness(
+            Long createdById = (Long) httpRequest.getAttribute("userId");
+            LoginResponse response = authService.createOwnerDirect(
                     request.getName(),
-                    request.getDescription(),
-                    request.getIndustry()
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getBusinessName(),
+                    createdById
             );
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(OwnerResponseDTO.builder()
-                            .message("Business created successfully")
-                            .businessId(business.getId())
-                            .businessName(business.getName())
-                            .success(true)
-                            .build());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
-            log.error("Business creation failed: {}", e.getMessage());
+            log.error("Owner creation failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(OwnerResponseDTO.builder()
-                            .message("Business creation failed: " + e.getMessage())
+                    .body(LoginResponse.builder()
+                            .message("Owner creation failed: " + e.getMessage())
                             .success(false)
                             .build());
         }
     }
 
-    // ==================== CREATE OWNER ====================
-    /**
-     * POST /api/admin/create-owner
-     * Admin creates an owner for a business
-     */
+    // ==================== CREATE OWNER (LEGACY: For existing business) ====================
     @PostMapping("/create-owner")
     public ResponseEntity<LoginResponse> createOwner(@Valid @RequestBody CreateOwnerDTO request) {
         try {

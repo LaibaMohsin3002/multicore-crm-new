@@ -141,7 +141,6 @@ public class JwtUtil {
      *  - an actual List in the claims (preferred),
      *  - a single comma-separated string (legacy).
      */
-    @SuppressWarnings("unchecked")
     public List<String> extractRoles(String token) {
         return extractClaim(token, claims -> {
             Object rolesObj = claims.get("roles");

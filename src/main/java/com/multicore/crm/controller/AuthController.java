@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class AuthController {
 
     private final AuthService authService;
@@ -40,6 +39,27 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             log.error("Customer registration failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(LoginResponse.builder()
+                            .message("Registration failed: " + e.getMessage())
+                            .success(false)
+                            .build());
+        }
+    }
+
+    // ==================== CUSTOMER PORTAL REGISTRATION ====================
+    /**
+     * POST /api/portal/register
+     * Customer self-registration via portal
+     */
+    @PostMapping("/portal/register")
+    public ResponseEntity<LoginResponse> portalRegister(@Valid @RequestBody RegisterRequest request) {
+        try {
+            // Same as customer registration
+            LoginResponse response = authService.registerCustomer(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            log.error("Portal registration failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(LoginResponse.builder()
                             .message("Registration failed: " + e.getMessage())

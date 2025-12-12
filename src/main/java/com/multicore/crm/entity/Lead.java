@@ -48,10 +48,12 @@ public class Lead {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private LeadStatus status = LeadStatus.NEW;
 
     @Min(0)
     @Max(100)
+    @Builder.Default
     private Integer score = 0;
 
     private String notes;

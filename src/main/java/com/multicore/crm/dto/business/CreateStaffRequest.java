@@ -1,18 +1,20 @@
-package com.multicore.crm.dto;
+package com.multicore.crm.dto.business;
 
+import com.multicore.crm.entity.Role;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterRequest {
-    @NotBlank(message = "Full name is required")
-    private String fullName;
+public class CreateStaffRequest {
+    @NotBlank(message = "Name is required")
+    private String name;
 
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
@@ -22,5 +24,10 @@ public class RegisterRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
-    private String phone; // Optional for customer registration
+    @NotNull(message = "Role is required")
+    private Role.RoleType role;
+
+    private String phone; // Optional
 }
+
+

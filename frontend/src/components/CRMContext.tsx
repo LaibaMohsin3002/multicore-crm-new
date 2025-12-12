@@ -112,25 +112,58 @@ export function CRMProvider({ children }: { children: any }) {
     try {
       await apiLogin(email, password);
       const u: any = await me();
+      const roleStr = String(u.role ?? "VIEWER").toLowerCase();
+      // Map backend roles to frontend roles
+      const roleMap: Record<string, UserRole> = {
+        "super_admin": "super_admin",
+        "business_admin": "owner",
+        "sales_manager": "sales_manager",
+        "sales_agent": "sales_agent",
+        "support_manager": "support_manager",
+        "support_agent": "support_agent",
+        "finance": "finance",
+        "viewer": "viewer",
+        "customer": "customer"
+      };
+      
       const user: User = {
         id: String(u.id ?? "me"),
         name: String(u.fullName ?? u.name ?? email),
         email: String(u.email ?? email),
-        role: String(u.role ?? "viewer") as UserRole,
+        role: roleMap[roleStr] || "viewer",
         status: "active",
         createdAt: new Date().toISOString(),
       };
       setCurrentUser(user);
-      setCurrentView(
-        user.role === "super_admin"
-          ? "super-admin-dashboard"
-          : "company-dashboard"
-      );
-      await Promise.all([refreshCustomers(), refreshLeads(), refreshTickets()]);
+      
+      // Set initial view based on role - route to role-specific dashboard
+      if (user.role === "super_admin") {
+        setCurrentView("super-admin-dashboard");
+      } else if (user.role === "owner") {
+        setCurrentView("owner-dashboard");
+      } else if (user.role === "sales_manager") {
+        setCurrentView("sales-manager-dashboard");
+      } else if (user.role === "sales_agent") {
+        setCurrentView("sales-agent-dashboard");
+      } else if (user.role === "support_manager") {
+        setCurrentView("support-manager-dashboard");
+      } else if (user.role === "support_agent") {
+        setCurrentView("support-agent-dashboard");
+      } else if (user.role === "finance") {
+        setCurrentView("finance-dashboard");
+      } else if (user.role === "viewer") {
+        setCurrentView("viewer-dashboard");
+      } else {
+        setCurrentView("company-dashboard");
+      }
+      // Only refresh business-level data if user is not Super Admin
+      if (user.role !== "super_admin") {
+        await Promise.all([refreshCustomers(), refreshLeads(), refreshTickets()]);
+      }
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error("Login failed", e);
-      return false;
+      throw e; // Re-throw to let LoginScreen handle the error message
     }
   };
 
@@ -143,9 +176,9 @@ export function CRMProvider({ children }: { children: any }) {
     try {
       await apiRegisterCustomer(payload);
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error("Register failed", e);
-      return false;
+      throw e; // Re-throw to let LoginScreen handle the error message
     }
   };
 
@@ -163,6 +196,8 @@ export function CRMProvider({ children }: { children: any }) {
 
   const refreshCustomers = async () => {
     if (!currentUser) return;
+    // Super Admin doesn't have access to business-level endpoints
+    if (currentUser.role === 'super_admin') return;
     try {
       const data = await apiFetch<Customer[]>(`/api/customers`, { auth: true });
       setCustomers(data);
@@ -173,6 +208,8 @@ export function CRMProvider({ children }: { children: any }) {
 
   const refreshLeads = async () => {
     if (!currentUser) return;
+    // Super Admin doesn't have access to business-level endpoints
+    if (currentUser.role === 'super_admin') return;
     try {
       const data = await apiFetch<Lead[]>(`/api/leads`, { auth: true });
       setLeads(data);
@@ -183,6 +220,8 @@ export function CRMProvider({ children }: { children: any }) {
 
   const refreshTickets = async () => {
     if (!currentUser) return;
+    // Super Admin doesn't have access to business-level endpoints
+    if (currentUser.role === 'super_admin') return;
     try {
       const data = await apiFetch<Ticket[]>(`/api/tickets`, { auth: true });
       setTickets(data);
@@ -238,7 +277,7 @@ export function CRMProvider({ children }: { children: any }) {
   };
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && currentUser.role !== 'super_admin') {
       refreshCustomers();
       refreshLeads();
       refreshTickets();

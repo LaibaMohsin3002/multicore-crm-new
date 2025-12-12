@@ -21,6 +21,13 @@ import { AuditLogView } from './components/AuditLogView';
 import { CustomerPortal } from './components/CustomerPortal';
 import { BusinessSettings } from './components/BusinessSettings';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { OwnerDashboard } from './components/OwnerDashboard';
+import { SalesManagerDashboard } from './components/SalesManagerDashboard';
+import { SalesAgentDashboard } from './components/SalesAgentDashboard';
+import { SupportManagerDashboard } from './components/SupportManagerDashboard';
+import { SupportAgentDashboard } from './components/SupportAgentDashboard';
+import { FinanceDashboard } from './components/FinanceDashboard';
+import { ViewerDashboard } from './components/ViewerDashboard';
 
 function AppContent() {
   const { currentUser, currentView, logout } = useCRM();
@@ -39,6 +46,8 @@ function AppContent() {
     switch (currentView) {
       case 'super-admin-dashboard':
         return <SuperAdminDashboard />;
+      case 'owner-dashboard':
+        return <OwnerDashboard />;
       case 'company-dashboard':
         return <CompanyDashboard />;
       case 'customers':
@@ -73,8 +82,38 @@ function AppContent() {
         return <BusinessSettings />;
       case 'analytics':
         return <AnalyticsDashboard />;
+      case 'sales-manager-dashboard':
+        return <SalesManagerDashboard />;
+      case 'sales-agent-dashboard':
+        return <SalesAgentDashboard />;
+      case 'support-manager-dashboard':
+        return <SupportManagerDashboard />;
+      case 'support-agent-dashboard':
+        return <SupportAgentDashboard />;
+      case 'finance-dashboard':
+        return <FinanceDashboard />;
+      case 'viewer-dashboard':
+        return <ViewerDashboard />;
       default:
-        return currentUser.role === 'super_admin' ? <SuperAdminDashboard /> : <CompanyDashboard />;
+        // Route to role-specific dashboard
+        if (currentUser.role === 'super_admin') {
+          return <SuperAdminDashboard />;
+        } else if (currentUser.role === 'owner') {
+          return <OwnerDashboard />;
+        } else if (currentUser.role === 'sales_manager') {
+          return <SalesManagerDashboard />;
+        } else if (currentUser.role === 'sales_agent') {
+          return <SalesAgentDashboard />;
+        } else if (currentUser.role === 'support_manager') {
+          return <SupportManagerDashboard />;
+        } else if (currentUser.role === 'support_agent') {
+          return <SupportAgentDashboard />;
+        } else if (currentUser.role === 'finance') {
+          return <FinanceDashboard />;
+        } else if (currentUser.role === 'viewer') {
+          return <ViewerDashboard />;
+        }
+        return <CompanyDashboard />;
     }
   };
 

@@ -30,33 +30,54 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = getJwtFromRequest(request);
 
-            if (StringUtils.hasText(jwt) && jwtUtil.validateToken(jwt)) {
-                String email = jwtUtil.extractEmail(jwt);
-                Long businessId = jwtUtil.extractBusinessId(jwt);
-                Long userId = jwtUtil.extractUserId(jwt);
+            if (StringUtils.hasText(jwt)) {
+                if (jwtUtil.validateToken(jwt)) {
+                    String email = jwtUtil.extractEmail(jwt);
+                    Long businessId = jwtUtil.extractBusinessId(jwt);
+                    Long userId = jwtUtil.extractUserId(jwt);
 
-                var userDetails = customUserDetailsService.loadUserByUsername(email);
+                    try {
+                        var userDetails = customUserDetailsService.loadUserByUsername(email);
 
-                // Verify authorities are loaded (for debugging)
-                if (userDetails.getAuthorities().isEmpty()) {
-                    log.warn("User {} has no authorities assigned", email);
+                        // Verify authorities are loaded (for debugging)
+                        if (userDetails.getAuthorities().isEmpty()) {
+                            log.warn("User {} has no authorities assigned", email);
+                        } else {
+                            log.debug("User {} authenticated with authorities: {}", email, userDetails.getAuthorities());
+                        }
+
+                        // Add businessId and tenantId to request attributes for tenant enforcement
+                        request.setAttribute("businessId", businessId);
+                        request.setAttribute("tenantId", businessId);
+                        request.setAttribute("userId", userId);
+
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+                        log.error("User not found: {}", e.getMessage());
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.getWriter().write("{\"error\":\"User not found\"}");
+                        return;
+                    }
                 } else {
-                    log.debug("User {} authenticated with authorities: {}", email, userDetails.getAuthorities());
+                    log.warn("Invalid JWT token");
+                    // Don't set 401 here for public endpoints - let Spring Security handle it
+                    // Only set 401 if this is a protected endpoint
+                    String path = request.getRequestURI();
+                    if (!path.startsWith("/api/auth/login") && !path.startsWith("/api/auth/register") && !path.startsWith("/api/health")) {
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\":\"Invalid or expired token\"}");
+                        return;
+                    }
                 }
-
-                // Add businessId and tenantId to request attributes for tenant enforcement
-                request.setAttribute("businessId", businessId);
-                request.setAttribute("tenantId", businessId);
-                request.setAttribute("userId", userId);
-
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
-            log.error("Cannot set user authentication: {}", e.getMessage());
+            log.error("Cannot set user authentication: {}", e.getMessage(), e);
+            // Continue filter chain for public endpoints
         }
 
         filterChain.doFilter(request, response);
